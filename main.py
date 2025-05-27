@@ -5,6 +5,11 @@ import numpy as np
 import time
 
 app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "FitPlate API çalışıyor!"}
+
 model = YOLO("food_best.pt")
 
 # Besin değerleri sözlüğü (100 gram)
