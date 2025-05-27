@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, UploadFile
 from ultralytics import YOLO
 import cv2
 import numpy as np
+import time
 
 app = FastAPI()
 model = YOLO("food_best.pt")
@@ -41,7 +42,10 @@ async def analyze(file: UploadFile = File(...)):
     npimg = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
+    start = time.time()
     results = model(image)
+    print(f"MODEL TAHMİN SÜRESİ: {time.time() - start:.2f} saniye")
+
     detections = []
 
     for result in results:
