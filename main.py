@@ -3,6 +3,8 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import time
+import os
+import uvicorn
 
 app = FastAPI()
 
@@ -67,3 +69,7 @@ async def analyze(file: UploadFile = File(...)):
             })
 
     return {"tahminler": detections}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
