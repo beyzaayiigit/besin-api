@@ -1,18 +1,13 @@
-from fastapi import FastAPI, File, UploadFile
-from ultralytics import YOLO
+from fastapi import FastAPI, UploadFile, File
+from uuid import uuid4
+import threading
 import cv2
 import numpy as np
-import time
-import os
-import uvicorn
+from ultralytics import YOLO
 
 app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "FitPlate API çalışıyor!"}
-
 model = YOLO("food_best.pt")
+results_store = {}
 
 # Besin değerleri sözlüğü (100 gram)
 nutrition_info = {
@@ -43,33 +38,39 @@ nutrition_info = {
     "waffle": {"kalori": 291, "yağ": 14.1, "protein": 7.9, "karbonhidrat": 32.9}
 }
 
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...)):
-    contents = await file.read()
-    npimg = np.frombuffer(contents, np.uint8)
-    image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+# Arka planda çalışacak tahmin fonksiyonu
+def detect_task(image_bytes, task_id):
+    npimg = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+    results = model(img)
 
-    start = time.time()
-    results = model(image)
-    print(f"MODEL TAHMİN SÜRESİ: {time.time() - start:.2f} saniye")
-
-    detections = []
-
+    predictions = []
     for result in results:
         for box in result.boxes:
             cls = int(box.cls[0])
-            label = model.names[cls].lower().strip()
             conf = float(box.conf[0])
+            label = model.names[cls].lower().strip()
             nutrition = nutrition_info.get(label, "bilgi bulunamadı")
 
-            detections.append({
+            predictions.append({
                 "yemek": label,
                 "doğruluk": round(conf, 2),
                 "besin değeri": nutrition
             })
 
-    return {"tahminler": detections}
+    results_store[task_id] = predictions
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    task_id = str(uuid4())
+    thread = threading.Thread(target=detect_task, args=(image_bytes, task_id))
+    thread.start()
+    return {"task_id": task_id}
+
+@app.get("/result/{task_id}")
+async def get_result(task_id: str):
+    if task_id in results_store:
+        return {"status": "done", "tahminler": results_store[task_id]}
+    else:
+        return {"status": "processing"}
