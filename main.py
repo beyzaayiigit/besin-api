@@ -47,11 +47,8 @@ async def analyze(file: UploadFile = File(...)):
     npimg = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
-    # Görüntüyü ölçeklendirme (224, 224)
-    image_resized = cv2.resize(image, (224, 224))
-
     start = time.time()
-    results = model(image_resized)
+    results = model(image)
     print(f"MODEL TAHMİN SÜRESİ: {time.time() - start:.2f} saniye")
 
     detections = []
