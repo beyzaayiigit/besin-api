@@ -4,6 +4,7 @@ import threading
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import time
 
 app = FastAPI()
 model = YOLO("food_best.pt")
@@ -40,9 +41,13 @@ nutrition_info = {
 
 # Arka planda çalışacak tahmin fonksiyonu
 def detect_task(image_bytes, task_id):
+    start_time = time.time()
     npimg = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
     results = model(img)
+    elapsed = round(time.time() - start_time, 2)
+
+    print(f"MODEL TAHMİN SÜRESİ: {elapsed:.2f} saniye")
 
     predictions = []
     for result in results:
