@@ -7,6 +7,11 @@ from ultralytics import YOLO
 import time
 
 app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "FitPlate API çalışıyor!"}
+
 model = YOLO("food_best.pt")
 results_store = {}
 
